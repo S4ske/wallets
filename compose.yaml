@@ -1,0 +1,51 @@
+services:
+  server:
+    build:
+      context: .
+      target: final
+    ports:
+      - 8080:8080
+    depends_on:
+       db:
+         condition: service_healthy
+    networks:
+      - backend_network
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: [ "sh", "-c" ]
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - migrate -path=/migrations -database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" up
+    networks:
+      - backend_network
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST: ${DB_HOST}
+      POSTGRES_PORT: ${DB_PORT}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_network
+
+volumes:
+  db-data:
+
+networks:
+  backend_network:
+    driver: bridge

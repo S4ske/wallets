@@ -1,0 +1,3 @@
+INSERT INTO wallets (id, balance)
+VALUES ('f512717e-1c3f-460e-a3c0-6901c3c2fbce', 1000)
+    ON CONFLICT DO NOTHING;
