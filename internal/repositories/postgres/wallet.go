@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 	"wallets/internal/domain"
 	"wallets/internal/repositories"
 )
@@ -52,7 +51,7 @@ func (wr *WalletRepository) SaveWallet(balance int) error {
 	query := "INSERT INTO wallets (balance) VALUES ($1)"
 	_, err := wr.db.Exec(query, balance)
 	if err != nil {
-		var pqErr pq.Error
+		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && (pqErr.Code == "23514" || pqErr.Code == "23000") {
 			return repositories.ErrBalanceConstraint
 		}
@@ -76,7 +75,7 @@ func (wr *WalletRepository) UpdateWallet(ID string, balanceDelta int) error {
 	_, err = tx.Exec(query, ID, balanceDelta)
 	if err != nil {
 		tx.Rollback()
-		var pqErr pq.Error
+		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && (pqErr.Code == "23514" || pqErr.Code == "23000") {
 			return repositories.ErrBalanceConstraint
 		}
