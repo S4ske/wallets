@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
@@ -32,10 +33,10 @@ func (wr *WalletRepository) GetWallet(id string) (*domain.Wallet, error) {
 func (wr *WalletRepository) GetWallets() ([]*domain.Wallet, error) {
 	query := "SELECT id, balance FROM wallets"
 	rows, err := wr.db.Query(query)
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	wallets := make([]*domain.Wallet, 0)
 	for rows.Next() {
 		var w domain.Wallet
@@ -85,4 +86,8 @@ func (wr *WalletRepository) UpdateWallet(ID string, balanceDelta int) error {
 		return err
 	}
 	return nil
+}
+
+func (wr *WalletRepository) Shutdown(_ context.Context) error {
+	return wr.db.Close()
 }

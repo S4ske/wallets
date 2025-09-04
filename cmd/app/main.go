@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	closer2 "wallets/internal/closer"
 	config2 "wallets/internal/config"
 	"wallets/internal/http-server/handlers"
 	"wallets/internal/repositories/postgres"
@@ -19,12 +20,16 @@ import (
 
 func main() {
 	cfg := config2.LoadConfig()
+
 	db, err := sql.Open("postgres", cfg.PostgresURL())
-	if err != nil {
-		log.Fatalf("failed to connect db: %s", err.Error())
+	if err != nil || db == nil {
+		log.Fatalf("failed to connect db: %v", err)
 	}
+
 	repo := postgres.NewPostgresWalletRepository(db)
+
 	svc := service.NewWalletService(repo, repo, repo)
+
 	h := handlers.NewWalletHandler(svc)
 
 	apiRouter := chi.NewRouter()
@@ -41,6 +46,10 @@ func main() {
 		Handler: appRouter,
 	}
 
+	closer := &closer2.Closer{}
+	closer.Add(srv.Shutdown)
+	closer.Add(repo.Shutdown)
+
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
 			fmt.Println("server stopping")
@@ -52,8 +61,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		fmt.Printf("failed to stop server: %s", err.Error())
+	if err := closer.Close(ctx); err != nil {
+		fmt.Printf("%s", err.Error())
 	} else {
 		fmt.Printf("gracegully shutdowned")
 	}
